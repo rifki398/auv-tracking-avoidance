@@ -1,0 +1,1 @@
+function wpt = add_alternative_waypoint(alt_wp)
