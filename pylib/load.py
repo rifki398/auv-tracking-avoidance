@@ -8,11 +8,13 @@ def load_data(n):
         # Ganti angka skenario sesuai kebutuhan
         filename1 = f'data/scenario_{i+1}.mat'
         filename2 = 'data/obstacles.mat'
+        filename3 = f'data/obs_avoid_{i+1}.mat'
 
         # Load .mat file
         mat_data1 = scipy.io.loadmat(filename1)
         mat_data2 = scipy.io.loadmat(filename2, squeeze_me=True, struct_as_record=False)
         mat_data3 = scipy.io.loadmat('data/waypoints.mat', squeeze_me=True, struct_as_record=False)
+        mat_data4 = scipy.io.loadmat(filename3,squeeze_me=True, struct_as_record=False)
 
         # Ambil data
         simData = mat_data1['simData']
@@ -20,13 +22,15 @@ def load_data(n):
         t = mat_data1['t'].squeeze()  # Hilangkan dimensi ekstra jika perlu
         obs = mat_data2['obs']
         wpt = mat_data3['wpt']
+        wpt_ori = mat_data3['wpt_ori']
         distData = mat_data1['distData']
         observerData = mat_data1['observerData']
+        obsAvoidData = mat_data4['obsAvoidData']
 
         # Contoh akses data
         print(f"simData shape: {simData.shape}")
         print(f"alosData shape: {alosData.shape}")
-        print(f"t (first 5): {t[:5]}\n")
+        print(f"Wpt-x: {wpt.pos.x.shape} wpt-y: {wpt.pos.y.shape} wpt-z: {wpt.pos.z.shape}")
 
         # === simData ===
         z_d      = simData[:, 0]
@@ -57,7 +61,6 @@ def load_data(n):
         alpha_c_act = alosData[:, 5]
         beta_c_act  = alosData[:, 6]
         
-
         # === disturbance data ===
         Vc = distData[:,0]
         alphaVc = distData[:,1]
@@ -70,6 +73,12 @@ def load_data(n):
         zeta1 = observerData[:,3]
         zeta2 = observerData[:,4]
         zeta3 = observerData[:,5]
+        Uvhat = observerData[:,6]
+        Uv = observerData[:,7]
+        
+        # === Obstacle Avoidance ===
+        d1 = obsAvoidData[:,0]
+        d2 = obsAvoidData[:,1]
 
         result = {
             'simData': simData,
@@ -82,16 +91,19 @@ def load_data(n):
             'x_e': x_e, 'y_e': y_e, 'z_e': z_e,
             'x_e_hat' : x_e_hat, 'y_e_hat' : y_e_hat ,'z_e_hat' : z_e_hat,
             'zeta1' : zeta1, 'zeta2' : zeta2, 'zeta3' : zeta3,
+            'Uvhat' : Uvhat, 'Uv' : Uv,
             'alpha_c_hat': alpha_c_hat, 'beta_c_hat': beta_c_hat,
             'alpha_c_act': alpha_c_act, 'beta_c_act': beta_c_act,
             'obs': obs,
-            'wpt': wpt
+            'wpt': wpt, 'wpt_ori' : wpt_ori,
+            'd1' : d1, 'd2' : d2,
+            'theta_d' : theta_d, 'psi_d' : psi_d
         }
         all_results.append(result)
         
     return all_results
 
-def plot_wpt(obs,wpt,etas : tuple, labels):
+def plot_wpt(obs,wpt,wpt_ori,etas : tuple, labels):
     # obs.pos dan obs.r masing-masing adalah cell array (dianggap list oleh Python)
     obs_pos = np.array(obs.pos) 
     obs_r   = np.array(obs.r) 
@@ -100,11 +112,16 @@ def plot_wpt(obs,wpt,etas : tuple, labels):
     y_path = np.array(wpt.pos.y).astype(float)
     z_path = np.array(wpt.pos.z).astype(float)
 
+    x_path_ori = np.array(wpt_ori.pos.x).astype(float)
+    y_path_ori = np.array(wpt_ori.pos.y).astype(float)
+    z_path_ori = np.array(wpt_ori.pos.z).astype(float)
+
     fig1 = plt.figure(figsize=(12,6))
 
     ax1 = fig1.add_subplot(projection='3d')
     ax1.grid()
-    ax1.plot(x_path, y_path, z_path, '.--', label='Waypoints')
+    # ax1.plot(x_path, y_path, z_path, '.--', label='New Path')
+    ax1.plot(x_path_ori,y_path_ori,z_path_ori,'--',label='Predefined Path')
 
     for pos,r in zip(obs_pos,obs_r):
         plot_sphere(ax1, pos, r)
@@ -123,11 +140,8 @@ def plot_wpt(obs,wpt,etas : tuple, labels):
         ax1.plot(x[0],y[0],z[0],'b*')
         ax1.plot(x[-1],y[-1],z[-1],'k*')
 
-        if len(labels) == 1:
-            ax1.plot(x,y,z, label='Tracked Path')
-        else:
-            ax1.plot(x,y,z, label=lab)
-
+        ax1.plot(x,y,z, label=lab)
+        
     ax1.plot(x_path[0], y_path[0], z_path[0], 'ko',label='Start')
     ax1.plot(x_path[-1],y_path[-1],z_path[-1],'ro',label='Goal')
 
@@ -164,7 +178,7 @@ def plot_wpt(obs,wpt,etas : tuple, labels):
     ax1.set_ylim(y_mid - max_range, y_mid + max_range)
     ax1.set_zlim(z_mid - max_range, z_mid + max_range)
 
-def plot_sphere(ax, center, radius, color='g', alpha=1.0):
+def plot_sphere(ax, center, radius, color='k', alpha=1.0):
     u = np.linspace(0, 2 * np.pi, 10)
     v = np.linspace(0, np.pi, 10)
     x = radius * np.outer(np.cos(u), np.sin(v)) + center[0]
@@ -172,6 +186,15 @@ def plot_sphere(ax, center, radius, color='g', alpha=1.0):
     z = radius * np.outer(np.ones(np.size(u)), np.cos(v)) + center[2]
     ax.plot_surface(x, y, z, color=color, alpha=alpha)
 
+def plot_Uvhat(Uv,Uvhat,t):
+    plt.figure()
+    plt.plot(t,Uv,label='Actual')
+    plt.plot(t,Uvhat,label='Estimated')
+    plt.xlabel('t (s)')
+    plt.ylabel('Uv (m/s)')
+    plt.legend()
+    plt.grid()
+    
 def plot_cte_vte(x_es : tuple,y_es : tuple,z_es : tuple, t,labels):
     fig,ax = plt.subplots(3,1,figsize=(10,8))
     for i,(ate,cte,vte) in enumerate(zip(x_es,y_es,z_es)):
@@ -259,12 +282,48 @@ def plot_slip_angle(alpha_c_hat : tuple, beta_c_hat : tuple, alpha_c_act, beta_c
     ax[0].set_ylabel('beta_c (deg)')
     ax[1].set_ylabel('alpha_c (deg)')
     ax[1].set_xlabel('t (s)')
-
-    ax[0].set_title('Side slip angle')
-    ax[1].set_title('Vertical slip angle')
     
     ax[0].legend()
     ax[1].legend()
+
+def plot_wpt_as_func_t(wpt,etas : tuple,t,labels):
+    x_path = np.array(wpt.pos.x).astype(float)
+    y_path = np.array(wpt.pos.y).astype(float)
+    z_path = np.array(wpt.pos.z).astype(float)
+
+    fig1,ax = plt.subplots(3,1,figsize=(8,4))
+
+    # ax[0].plot(t,x_path,'--g')
+    # ax[0].plot(t,x_path,'og')
+
+    # ax[1].plot(t,y_path,'--r')
+    # ax[1].plot(t,y_path,'or')
+
+    # ax[2].plot(t,z_path,'--b')
+    # ax[2].plot(t,z_path,'ob')
+
+    ax[0].grid()
+    ax[1].grid()
+    ax[2].grid()
+
+    ax[2].set_xlabel('t (s)')
+    ax[0].set_ylabel('North (m)')
+    ax[1].set_ylabel('East (m)')
+    ax[2].set_ylabel('Down (m)')
+
+    for i,(eta,lab) in enumerate(zip(etas,labels)):
+        # State vectors
+        x = eta[:, 0]
+        y = eta[:, 1]
+        z = eta[:, 2]
+
+        ax[0].plot(t,x,label=lab)
+        ax[1].plot(t,y,label=lab)
+        ax[2].plot(t,z,label=lab)
+    
+    ax[0].legend()
+    ax[1].legend()
+    ax[2].legend()
 
 def plot_wpt_2d(wpt,etas : tuple):
     # obs.pos dan obs.r masing-masing adalah cell array (dianggap list oleh Python)
@@ -277,15 +336,15 @@ def plot_wpt_2d(wpt,etas : tuple):
 
     ax[0].plot(y_path,x_path,'-g')
     ax[0].plot(y_path,x_path,'og')
-    ax[1].plot(y_path,-z_path,'-r')
-    ax[1].plot(y_path,-z_path,'or')
+    ax[1].plot(y_path,z_path,'-r')
+    ax[1].plot(y_path,z_path,'or')
 
     ax[0].grid()
     ax[1].grid()
 
-    ax[0].set_ylabel('x (m)')
-    ax[1].set_ylabel('z (m)')
-    ax[1].set_xlabel('y (m)')
+    ax[0].set_ylabel('North (m)')
+    ax[1].set_ylabel('Down (m)')
+    ax[1].set_xlabel('East (m)')
 
     plt.show(block=False)
 
@@ -319,3 +378,105 @@ def plot_state_observer(zeta1,zeta2,zeta3,t):
     ax[1].set_ylabel('zeta2 (m/s)')
     ax[2].set_ylabel('zeta3 (m/s)')
     ax[2].set_xlabel('t (s)')
+
+def plot_threat(d1list : tuple,d2list : tuple,t,labels):
+    plt.figure()
+    for i in range(len(d1list)):
+        d1 = d1list[i]
+        d2 = d2list[i]
+
+        d = np.maximum(d1,d2)
+        plt.plot(t,np.sqrt(d),label=labels[i])
+    
+    plt.plot(t, np.ones_like(t) * (1/(5.0)), '--', label='Safe distance')
+    plt.grid()
+    plt.legend()
+    plt.xlabel('t (s)')
+    plt.ylabel(r'$1/d$ (m$^{-2}$)')
+
+def plot_angle_ref(t,theta_d,psi_d,eta):
+    theta = eta[:,4]
+    psi = eta[:,5]
+
+    fig,ax = plt.subplots(2,1,figsize=(10,8))
+
+    ax[0].plot(t,np.rad2deg(theta_d),label='Reference')
+    ax[0].plot(t,np.rad2deg(theta),label='Actual')
+
+    ax[1].plot(t,np.rad2deg(psi_d),label='Reference')
+    ax[1].plot(t,np.rad2deg(psi),label='Actual')
+
+    ax[0].grid()
+    ax[1].grid()
+
+    ax[0].legend()
+    ax[1].legend()
+
+    ax[1].set_xlabel('t (s)')
+    ax[0].set_ylabel('theta (deg)')
+    ax[1].set_ylabel('psi (deg)')
+
+def plot_state(t,u,v,w,p,q,r):
+    _, ax1 = plt.subplots(3,1,figsize=(10,8))
+    ax1[0].plot(t,u)
+    ax1[1].plot(t,v)
+    ax1[2].plot(t,w)
+
+    ax1[0].set_ylabel('u (m/s)')
+    ax1[1].set_ylabel('v (m/s)')
+    ax1[2].set_ylabel('w (m/s)')
+    ax1[2].set_xlabel('t (s)')
+
+    ax1[0].grid()
+    ax1[1].grid()
+    ax1[2].grid()
+
+    _, ax2 = plt.subplots(3,1,figsize=(10,8))
+    ax2[0].plot(t,p)
+    ax2[1].plot(t,q)
+    ax2[2].plot(t,r)
+
+    ax2[0].set_ylabel('p (rad/s)')
+    ax2[1].set_ylabel('q (rad/s)')
+    ax2[2].set_ylabel('r (rad/s)')
+    ax2[2].set_xlabel('t (s)')
+
+    ax2[0].grid()
+    ax2[1].grid()
+    ax2[2].grid()
+
+def plot_pos_ort(t,eta):
+    x = eta[:,0]
+    y = eta[:,1]
+    z = eta[:,2]
+    phi = eta[:,3]
+    theta = eta[:,4]
+    psi = eta[:,5]
+
+    _, ax1 = plt.subplots(3,1,figsize=(10,8))
+    ax1[0].plot(t,x)
+    ax1[1].plot(t,y)
+    ax1[2].plot(t,z)
+
+    ax1[0].set_ylabel('x (m)')
+    ax1[1].set_ylabel('y (m)')
+    ax1[2].set_ylabel('z (m)')
+    ax1[2].set_xlabel('t (s)')
+
+    ax1[0].grid()
+    ax1[1].grid()
+    ax1[2].grid()
+
+    _, ax2 = plt.subplots(3,1,figsize=(10,8))
+    ax2[0].plot(t,np.rad2deg(phi))
+    ax2[1].plot(t,np.rad2deg(theta))
+    ax2[2].plot(t,np.rad2deg(psi))
+
+    ax2[0].set_ylabel('phi (deg)')
+    ax2[1].set_ylabel('theta (deg)')
+    ax2[2].set_ylabel('psi (deg)')
+    ax2[2].set_xlabel('t (s)')
+
+    ax2[0].grid()
+    ax2[1].grid()
+    ax2[2].grid()

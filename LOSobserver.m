@@ -18,7 +18,8 @@ function [LOSangle, LOSrate] = ...
 % where T_f is the differentiator time constant, which can be determined by
 % pole-placement and inspection of the closed-loop system
 % 
-%    LOSangle/LOScommand = w_n^2 * (T_f*s + 1) / (s^2 + 2*w_n*s + w_n^2)
+%    LOSangle/LOScommand = w_n^2 *
+%  (T_f*s + 1) / (s^2 + 2*w_n*s + w_n^2)
 % 
 % If K_f > 0, it follows that T_f = 1 / ( K_f + 2*sqrt(K_f) + 1 ) and that 
 % the natural frequency is w_n = K_f + sqrt(K_f). Exact discretization of 

@@ -1,5 +1,4 @@
 function x = rk4(Function, h, x, varargin)
-% RK4 integration 
 %
 % Inputs:
 %   Function - handle to the dynamics function: xdot = Function(x, varargin)

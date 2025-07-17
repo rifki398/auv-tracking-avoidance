@@ -1,4 +1,7 @@
-function [alpha_c_hat, beta_c_hat, ehat, zetahat,e_tilde] = observer(e,pii,nu,eta,ehat,zetahat,Ts)
+function [alpha_c_hat, beta_c_hat, ehat, zetahat,e_tilde] = observer(e,pii,x,ehat,zetahat,Uvhat,Ts)
+    nu = x(1:6);
+    eta = x(7:12);
+
     pi_h = pii(1);
     pi_v = pii(2);
 

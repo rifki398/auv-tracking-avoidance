@@ -1,8 +1,4 @@
 classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
-    properties (Constant)
-        OBS_PATH = 'json/obs.json'
-    end
-    
     properties
         radius
         obstacles
@@ -16,20 +12,12 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             obj@WhaleOptimizationAlgorithm(dim, opt_func, boundary, nsols, b, a, a_step, maximize);
             obj.opt_func = @(x) obj.f(x); % pakai method f sebagai default cost
             
-            % Load obstacle data
-            fid = fopen(obj.OBS_PATH);
-            raw = fread(fid, inf);
-            str = char(raw');
-            fclose(fid);
-            obs_data = jsondecode(str);
-            
-            obj.radius = obs_data.radius;
-            obj.obstacles = obs_data.obs;
         end
         
         %% Cost functions
-        function cost = f2(obj, x, xk, xk1, obs, radius)
+        function cost = f2(obj, x, xk, xk1, obs, r)
             % ... terjemahkan isi _f2 dari Python ke MATLAB
+            disp(r)
             x = x(:)';  % pastikan row vector
 
             J_s = norm(x - xk);
@@ -65,8 +53,7 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             J_side = (side_h + side_v) * 5;
 
             % Intersection penalty
-            if obj.line_intersects_sphere(xk, x, obs, radius, obj.safe_distance) || ...
-               obj.line_intersects_sphere(x, xk1, obs, radius, obj.safe_distance)
+            if obj.check_intsersect(xk, x, obs, r, obj.safe_distance) || obj.check_intsersect(x, xk1, obs, r, obj.safe_distance)
                 penalty = 1e6;
             else
                 penalty = 0;
@@ -77,8 +64,8 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             cost = w_s*J_s + w_g*J_g + w_d*J_d + w_angle*J_angle + J_side + penalty;
         end
 
-        function cost = f(obj, x, xk, xk1, obs, radius)
-            x = x(:)'; % pastikan row
+        function cost = f(obj, x, xk, xk1, obs, r)
+            x = x'; % pastikan row
             % v2 = xk1 - xk;
             % v2hat = v2 / norm(v2);
 
@@ -87,8 +74,8 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             J_s = norm(x - xk);
             J_g = norm(x - xk1);
 
-            if obj.line_intersects_sphere(xk, x, obs, radius, obj.safe_distance) || ...
-               obj.line_intersects_sphere(x, xk1, obs, radius, obj.safe_distance)
+            if obj.check_intsersect(xk, x, obs, r, obj.safe_distance) || ...
+               obj.check_intsersect(x, xk1, obs, r, obj.safe_distance)
                 penalty = 1e6;
             else
                 penalty = 0;
@@ -133,19 +120,20 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             dir_v = sign(cross_v);
         end
 
-        function res = line_intersects_sphere(~, pos, target, obs, radius, tol)
+        function res = check_intsersect(~, pos, target, obs, r, tol)
             d = target - pos;
             f = pos - obs;
 
             a = dot(d,d);
             b = 2*dot(f,d);
-            c = dot(f,f)-(radius+tol)^2;
+            c = dot(f,f)-(r+tol)^2;
+            
 
             discriminant = b^2 - 4*a*c;
             res = discriminant >=0;
         end
 
-        function res = toward_obstacle(~, etadot, pos, obs, radius)
+        function res = toward_obstacle(~, etadot, pos, obs, r)
             if norm(etadot)==0
                 res=false; return;
             end
@@ -157,22 +145,21 @@ classdef WOA_PathPlanning < WhaleOptimizationAlgorithm
             if proj<0
                 res=false;
             else
-                res=d<=radius;
+                res=d<=r;
             end
         end
 
         %% Replan method
-        function best_sol = repath_planning(obj, pos, goal, obs)
-            r = obj.radius;
-            obj = obj.renew_cost_function(@(x)obj.f(x,pos,goal,obs,r));
+        function best_sol = repath_planning(obj, pos, goal, obs, r)
+            obj.renew_cost_function(@(x)obj.f(x,pos,goal,obs,r));
             
             boundary_range=50;
             boundary = [obs(1)-boundary_range, obs(1)+boundary_range;
                         obs(2)-boundary_range, obs(2)+boundary_range;
-                        obs(3)-boundary_range, obs(3)+boundary_range];
-            obj = obj.renew_init_sols(boundary);
+                        0, obs(3)+boundary_range];
+            obj.renew_init_sols(boundary);
             for i=1:obj.ngens
-                obj = obj.optimize();
+                obj.optimize();
             end
             [~,best_sol]=obj.get_best_solution();
         end

@@ -1,5 +1,5 @@
-function [psi_ref, theta_ref, e, alpha_hat, beta_hat, pk1, pi_h,pi_v, switching] = ...
-    ALOS3D(x,y,z,h,R_switch,wpt,alpha_hat,beta_hat)
+function [psi_ref, theta_ref, e, alpha_hat, beta_hat, pk1, pi_h,pi_v, switching ,idx] = ...
+    ALOS3D(x,y,z,h,R_switch,wpt,alpha_hat,beta_hat,t)
 % ALOS3D is compatible with MATLAB and GNU Octave (www.octave.org). The
 % function [psi_ref, theta_ref, y_e, z_e, alpha_c_hat, beta_c_hat] = ...
 % ALOS3D(x,y,z,Delta_h,Delta_v,gamma_h,gamma_v,M_theta,h,R_switch,wpt)
@@ -107,9 +107,8 @@ if isempty(k)
     xk = wpt.pos.x(k); 
     yk = wpt.pos.y(k);  
     zk = wpt.pos.z(k);     
-    fprintf('Active waypoints:\n')
-    fprintf('  (x%1.0f,y%1.0f,z%1.0f) = (%.1f,%.1f,%.1f) \n',k,k,k,xk,yk,zk);
-
+    fprintf('Active waypoints: %.0f === ',k)
+    fprintf('(%.0f,%.0f,%.0f) \n',xk,yk,zk);
 end
 
 %% Read next waypoint (xk_next, yk_next, zk_next) from wpt.pos 
@@ -117,7 +116,7 @@ n = length(wpt.pos.x);
 if k < n                        % if there are more waypoints, read next one 
     xk_next = wpt.pos.x(k+1);  
     yk_next = wpt.pos.y(k+1);   
-    zk_next = wpt.pos.z(k+1); 
+    zk_next = wpt.pos.z(k+1);
 else                            % else, continue with last bearing and depth
     bearing = atan2((wpt.pos.y(n)-wpt.pos.y(n-1)), (wpt.pos.x(n)-wpt.pos.x(n-1)));
     R = 1e10;
@@ -147,11 +146,15 @@ z_e = e(3);
 d = sqrt( (xk_next-x)^2 + (yk_next-y)^2 + (zk_next-z)^2 );
 if (d < R_switch) && (k < n)
     k = k + 1;
+    fprintf('Reference from [%.0f %.0f %.0f] changed to next [%.0f %.0f %.0f] t: %.2f \n', xk, yk, zk, xk_next, yk_next, zk_next, t)
     xk = xk_next;       % update active waypoint
     yk = yk_next; 
     zk = zk_next;     
-    fprintf('  (x%1.0f,y%1.0f,z%1.0f) = (%.1f,%.1f,%.1f) \n',k,k,k,xk,yk,zk);
     switching = true;
+    % fprintf('Active waypoints: %.0f === ',k)
+    % fprintf('(%.0f,%.0f,%.0f) with n: %.0f \n',xk,yk,zk,n);
+    % fprintf('Next waypoints: %.0f === ', (k+1))
+    % fprintf('(%.0f,%.0f,%.0f) with n: %.0f \n',xk_next,yk_next,zk_next,n); 
 else
     switching = false;
 end
@@ -164,7 +167,8 @@ theta_ref = pi_v + alpha_hat + atan( z_e / Delta_v );
 alpha_hat = alpha_hat + h * gamma_v * Delta_v / sqrt( Delta_v^2 + z_e^2 ) * proj(alpha_hat, z_e, M_theta);
 beta_hat = beta_hat + h * gamma_h * Delta_h / sqrt( Delta_h^2 + y_e^2 ) * proj(beta_hat, y_e, M_theta);
 
-pk1 = [xk_next yk_next zk_next];
+pk1 = [xk_next;yk_next;zk_next];
+idx = k;
 end
 
 % *************************************************************************

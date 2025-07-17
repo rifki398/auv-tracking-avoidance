@@ -1,4 +1,4 @@
-classdef WhaleOptimizationAlgorithm
+classdef WhaleOptimizationAlgorithm < handle
     % Whale Optimization Algorithm (WOA) for local path planning in obstacle avoidance task
     properties
         dim                 % dimension of variable
@@ -24,9 +24,7 @@ classdef WhaleOptimizationAlgorithm
                 obj.b = b;
                 obj.a = a;
                 obj.a_step = a_step;
-                if nargin >= 8
-                    obj.maximize = maximize;
-                end
+                obj.maximize = maximize;
                 obj.best_solutions = {};
                 obj.sols = [];
             end
@@ -121,7 +119,8 @@ classdef WhaleOptimizationAlgorithm
                 [~, idx] = sort(fitness,'ascend');
             end
             
-            obj.best_solutions{end+1} = [fitness(idx(1)), obj.sols(idx(1),:)];
+            best_sol = [fitness(idx(1)), obj.sols(idx(1),:)];
+            obj.best_solutions{end+1} = best_sol;
             ranked = obj.sols(idx,:);
         end
         
@@ -142,9 +141,9 @@ classdef WhaleOptimizationAlgorithm
                 value = [];
                 return;
             end
-            all = cell2mat(obj.best_solutions');
-            fitnesses = all(:,1);
-            sol = all(:,2:end);
+            alls = cell2mat(obj.best_solutions');
+            fitnesses = alls(:,1);
+            sol = alls(:,2:end);
             
             if obj.maximize
                 [fitness, idx] = max(fitnesses);

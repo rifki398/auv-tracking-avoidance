@@ -24,16 +24,12 @@ function SIMremus100(scenario)
 
 % Author: Thor I. Fossen
 % Date: 2021-06-28
-clearvars;                          % Clear all variables from memory
-clear integralSMCheading ALOS3D;    % Clear persistent states in controllers
-close all;                          % Close all open figure windows
-clc;
 
 if nargin < 1
     scenario = 2;
 end
 
-fprintf('Scenario: %.2f',scenario)
+fprintf('------------------- Scenario: %.0f -------------------\n',scenario)
 
 %% SIMULATOR CONFIGURATION ================================================================================
 h = 0.05;                           % Sampling time (s)
@@ -46,13 +42,15 @@ KinematicsFlag = 1;
 wpt.pos.x = [0 -10 -50 0 100 100 200 350];
 wpt.pos.y = [0 100 300 475 650 900 1100 1300];
 wpt.pos.z = [0 5 50 50 25 25 5 5];
+
+wpt_ori = wpt;
 % wpt.pos.x = [0 200 -100 0 200];
 % wpt.pos.y = [0 400 600 900 1300];
 % wpt.pos.z = [0 10 100 100 50];
 
 % Obstacle
-obs.pos = {[-25, 200, 30], [100, 800, 20], [270,1190,5]};
-obs.r = {30,40,45};
+obs.pos = {[-25;200;30], [100;800;0]};
+obs.r = {30,40};
 
 % Initialize position and orientation
 xn = 0; yn = 0; zn = 0;             % Initial North-East-Down positions (m)
@@ -136,6 +134,7 @@ beta_c_hat = 0;
 % initial observer state
 zetahat = [1.1 1.5 1.2];
 ehat = [5 2 5];
+Uvhat = 0;
 
 % Additional parameter for straigh-line path following
 R_switch = 5;               % Radius of switching circle
@@ -144,7 +143,15 @@ tau = 0;
 switching = false;
 
 % For Obstacle Avoidance
-woa = WOA_PathPlanning;
+dim = 3;
+opt_func = [];
+boundary = [-1000,1000; -1000,1000; -1000,1000];
+nsols = 30;
+b = 0.5;
+a = 2.0;
+a_step = 2.0/20;
+maximize = false;
+woa = WOA_PathPlanning(dim, opt_func, boundary, nsols, b, a, a_step, maximize);
 current_alt_wp = [0 0 0];
 to_alt_wp = false;
 
@@ -157,7 +164,8 @@ rangeCheck(U, 0, 5);
 simData = zeros(nTimeSteps, length(x) + 10); % Preallocate table for simulation data
 alosData = zeros(nTimeSteps, 7); % Preallocate table for ALOS guidance data
 distData = zeros(nTimeSteps, 3);
-observerData = zeros(nTimeSteps, 6);
+observerData = zeros(nTimeSteps, 8);
+obsAvoidData = zeros(nTimeSteps,2);
 
 for i = 1:nTimeSteps
 
@@ -192,36 +200,41 @@ for i = 1:nTimeSteps
 
         % ALOS guidance lawk
         [alpha_c_act, beta_c_act] = ActualSlipAngle(x);
+        % [Uvhat, Uvact] = calculate_uhat(etadot,x(1:6));
         
         if scenario == 1
-            [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp, ~, ~, switching] = ALOS3D(xn,yn,zn, ...
-            h, R_switch, wpt, alpha_c_hat, beta_c_hat);
+            [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp, ~, ~, switching, idx_wp] = ALOS3D(xn,yn,zn, ...
+            h, R_switch, wpt, alpha_c_hat, beta_c_hat, t(i));
+            [Uvhat,Uvact] = calculate_uhat(etadot,x(1:6),beta_c_hat);
         elseif scenario == 2
             if switching && tau > 60
                 tau = 0;
-                [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp,~,~, switching] = ALOS3D(xn,yn,zn, ...
-                h, R_switch, wpt, alpha_c_hat, beta_c_hat);
-                [~, ~, ehat, zetahat] = observer(e,pii,x(1:6),x(7:12),ehat,zetahat,h);
+                [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp,~,~, switching, idx_wp] = ALOS3D(xn,yn,zn, ...
+                h, R_switch, wpt, alpha_c_hat, beta_c_hat,t(i));
+                [~, ~, ehat, zetahat] = observer(e,pii,x,ehat,zetahat,Uvhat,h);
+                [Uvhat,Uvact] = calculate_uhat(etadot,x(1:6),beta_c_hat);
             elseif ~switching && tau < 60
                 tau = tau + 1;
-                [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp,pi_h, pi_v, switching] = ALOS3D(xn,yn,zn, ...
-                h, R_switch, wpt, alpha_c_hat, beta_c_hat);
+                [psi_ref, theta_ref, e, alpha_c_hat, beta_c_hat, target_wp,pi_h, pi_v, switching, idx_wp] = ALOS3D(xn,yn,zn, ...
+                h, R_switch, wpt, alpha_c_hat, beta_c_hat, t(i));
                 pii = [pi_h,pi_v];
-                [~, ~, ehat, zetahat] = observer(e,pii,x(1:6),x(7:12),ehat,zetahat,h);
+                [~, ~, ehat, zetahat] = observer(e,pii,x,ehat,zetahat,Uvhat,h);
+                [Uvhat,Uvact] = calculate_uhat(etadot,x(1:6),beta_c_hat);
             else
-                [psi_ref, theta_ref, e, ~, ~, target_wp, pi_h, pi_v, switching] = ALOS3D(xn,yn,zn, ...
-                h, R_switch, wpt, alpha_c_hat, beta_c_hat);
+                [psi_ref, theta_ref, e, ~, ~, target_wp, pi_h, pi_v, switching, idx_wp] = ALOS3D(xn,yn,zn, ...
+                h, R_switch, wpt, alpha_c_hat, beta_c_hat, t(i));
                 pii = [pi_h,pi_v];
-                [alpha_c_hat, beta_c_hat, ehat, zetahat] = observer(e,pii,x(1:6),x(7:12),ehat,zetahat,h);
+                [alpha_c_hat, beta_c_hat, ehat, zetahat] = observer(e,pii,x,ehat,zetahat,Uvhat,h);
+                [Uvhat,Uvact] = calculate_uhat(etadot,x(1:6),beta_c_hat);
                 tau = tau + 1;
             end
         else
             error('Scenario not valid')
         end
 
-        if switching
-            fprintf('Switching at t:%.2f with pos: (%.2f,%.2f,%.2f)',t(i),xn,yn,zn)
-        end
+        % if switching
+        %     fprintf('Switching at t:%.2f with pos: (%.2f,%.2f,%.2f)',t(i),xn,yn,zn)
+        % end
 
         x_e = e(1); y_e = e(2); z_e = e(3);
 
@@ -233,21 +246,35 @@ for i = 1:nTimeSteps
     end
 
     % Ocean current dynamics
-    % [Vc,alphaVc,betaVc,wc] = disturbance_function(t(i),h);
-    Vc = 0; alphaVc = 0; betaVc = 0; wc = 0;
+    [Vc,alphaVc,betaVc,wc] = disturbance_function(t(i),h);
+    % Vc = 0; alphaVc = 0; betaVc = 0; wc = 0;
 
     % Sonar check for obstacle 
-    [detected_obs,r_obs,ang_obs,intersect_obs,toward_obs] = sonar3D(x,etadot,target_wp,obs);
+    [threat_dist,detected_obs,r_obs,ang_obs,intersect_obs,toward_obs,idx_obs] = sonar3D(x,etadot,target_wp,obs);
     ang_obs = rad2deg(ang_obs);
-    if ~isempty(detected_obs) && intersect_obs && toward_obs
-        fprintf('Obs detected in range %.0f with psi: %.1f°, theta: %.1f° from pos. [%.0f %.0f %.0f]\n', ...
-            r_obs, ang_obs(1), ang_obs(2), x(7), x(8), x(9));
-        alt_wp = woa.repath_planning(x(7:9),target_wp,detected_obs);
-        if ~isequal(current_alt_wp,alt_wp)
-            wpt = add_alternative_waypoint(alt_wp);
+    if ~isempty(detected_obs) && intersect_obs
+        fprintf('Obs detected in range %.0f with psi: %.1f°, theta: %.1f° from pos. [%.0f %.0f %.0f] with idx: %.0f\n', ...
+            r_obs, ang_obs(1), ang_obs(2), x(7), x(8), x(9),idx_wp);
+        radius_obs = obs.r{idx_obs};
+        alt_wp = woa.repath_planning(x(7:9),target_wp,detected_obs,radius_obs);
+        if idx_wp >= 9
+            fprintf('Pos obs: [%.0f %.0f %.0f] \n',detected_obs(1), detected_obs(2), detected_obs(3))
+            fprintf('Current wp [%.0f %.0f %.0f] --  alt wp [%.0f %.0f %.0f] -- target: [%.0f %.0f %.0f] \n',...
+                current_alt_wp(1),current_alt_wp(2),current_alt_wp(3),alt_wp(1),alt_wp(2),alt_wp(3),...
+                target_wp(1),target_wp(2),target_wp(3))
+        end
+        if ~isequal(round(current_alt_wp,1),round(alt_wp,1))
+            % fprintf('\n New WP Generated because obs at [%.0f %.0f %.0f] at k:%.0f \n',detected_obs(1),detected_obs(2),detected_obs(3),idx_wp)
+            % wpt = add_alternative_waypoint(wpt,alt_wp,idx_wp);
+            fprintf('New WP at: [%.1f %.1f %.1f]',alt_wp(1),alt_wp(2),alt_wp(3))
+            switching = true;
             to_alt_wp = true;
         end
         current_alt_wp = alt_wp;
+    end
+
+    if switching && to_alt_wp
+        to_alt_wp = false;
     end
 
     % Propeller speed (RPM)
@@ -271,7 +298,10 @@ for i = 1:nTimeSteps
     distData(i,:) = [Vc alphaVc betaVc];
 
     % Observer data
-    observerData(i,:) = [ehat(1) ehat(2) ehat(3) zetahat(1) zetahat(2) zetahat(3)];
+    observerData(i,:) = [ehat(1) ehat(2) ehat(3) zetahat(1) zetahat(2) zetahat(3) Uvhat Uvact];
+
+    % Obstacle Avoidance Data
+    obsAvoidData(i,:) = [threat_dist(1) threat_dist(2)];
 
     if (KinematicsFlag == 1)
         % Euler angles x = [ u v w p q r x y z phi theta psi ]'
@@ -295,9 +325,11 @@ for i = 1:nTimeSteps
 end
 
 filename = strcat('data/scenario_', num2str(scenario), '.mat');
+filename1 =  strcat('data/obs_avoid_', num2str(scenario), '.mat');
 save(filename, 'simData', 'alosData','distData','observerData', 't','-v7');
 save('data/obstacles.mat', 'obs', '-v7');
-save('data/waypoints.mat', 'wpt', '-v7');
+save('data/waypoints.mat', 'wpt', 'wpt_ori', '-v7');
+save(filename1,'obsAvoidData', '-v7');
 
 %% PLOTS ===================================================================================================
 scrSz = get(0, 'ScreenSize'); % Returns [left bottom width height]
