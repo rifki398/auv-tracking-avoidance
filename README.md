@@ -33,8 +33,7 @@ To visualize the simulation output, run the Python script: ```plot_data.py```
     </td>
   </tr>
 </table>
-For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the 
-[manual book](https://drive.google.com/drive folders/1r0Oy2otmFsFJCPTh0_OJNiTHkJhXektt?usp=sharing). 
+For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://drive.google.com/drive/folders/1r0Oy2otmFsFJCPTh0_OJNiTHkJhXektt?usp=sharing).
 
 ## Dependencies
 You need to install:
