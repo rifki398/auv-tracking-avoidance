@@ -1,6 +1,6 @@
 # AUV Path Tracking and Obstacle Avoidance
 AUV Simulation for Path Tracking and Obstacle Avoidance
-This repository contains a simulation framework for an **Autonomous Underwater Vehicle (AUV)** performing path tracking and obstacle avoidance. The implementation uses MATLAB for the main simulation and Python for data visualization. 
+This repository contains a simulation framework for an **Autonomous Underwater Vehicle (AUV)** performing path tracking and obstacle avoidance. The implementation uses MATLAB for the main simulation and Python for data visualization.   
 <img src="remus100.jpg" alt="AUV Remus100" width="500"/>
 
 ## Project Structure
