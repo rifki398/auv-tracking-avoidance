@@ -24,11 +24,11 @@ To visualize the simulation output, run the Python script: ```plot_data.py```
 <table>
   <tr>
     <td align="center">
-      <img src="example/oa-proposed-trial1" alt="Result 1" width="270"/>
+      <img src="example/oa-proposed-trial1.png" alt="Result 1" width="270"/>
       <br/>Path Tracking & Obstacle Avoidance
     </td>
     <td align="center">
-      <img src="example/oa-d-trial1" alt="Result 2" width="270"/>
+      <img src="example/oa-d-trial1.png" alt="Result 2" width="270"/>
       <br/>Threat Function of 2 Methods
     </td>
   </tr>
