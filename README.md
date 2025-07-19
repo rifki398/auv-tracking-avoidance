@@ -20,9 +20,12 @@ Run the following script from MATLAB to execute the simulation: ```main.m```.
 Simulation results will be saved automatically to the ```data/``` folder in .mat file.
 
 ### 2. Visualize the Results (Python)
-To visualize the simulation output, run the Python script: ```plot_data.py```
+To visualize the simulation output, run the Python script: ```plot_data.py```  
+
+For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://drive.google.com/drive/folders/1r0Oy2otmFsFJCPTh0_OJNiTHkJhXektt?usp=sharing).
 
 ## Dependencies
+You need to install:
 1. MATLAB
 2. Python 3.X with NumPy, matplotlib
 
