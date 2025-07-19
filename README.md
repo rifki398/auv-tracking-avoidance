@@ -21,7 +21,9 @@ Simulation results will be saved automatically to the ```data/``` folder in .mat
 
 ### 2. Visualize the Results (Python)
 To visualize the simulation output, run the Python script: ```plot_data.py```  
-
+<p align="center">
+  <img src="example/oa-proposed-trial1.png" alt="Scenario" width="550"/>
+</p>
 For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://drive.google.com/drive/folders/1r0Oy2otmFsFJCPTh0_OJNiTHkJhXektt?usp=sharing).
 
 ## Dependencies
