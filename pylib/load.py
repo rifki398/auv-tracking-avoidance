@@ -446,6 +446,7 @@ def plot_state(t,u,v,w,p,q,r):
     ax2[2].grid()
 
 def plot_pos_ort(t,eta):
+    """ Plot position and orientation"""
     x = eta[:,0]
     y = eta[:,1]
     z = eta[:,2]

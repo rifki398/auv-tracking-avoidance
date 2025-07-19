@@ -146,7 +146,7 @@ z_e = e(3);
 d = sqrt( (xk_next-x)^2 + (yk_next-y)^2 + (zk_next-z)^2 );
 if (d < R_switch) && (k < n)
     k = k + 1;
-    fprintf('Reference from [%.0f %.0f %.0f] changed to next [%.0f %.0f %.0f] t: %.2f \n', xk, yk, zk, xk_next, yk_next, zk_next, t)
+    fprintf('Reference wpt. from [%.0f %.0f %.0f] changed to next [%.0f %.0f %.0f] t: %.2f \n', xk, yk, zk, xk_next, yk_next, zk_next, t)
     xk = xk_next;       % update active waypoint
     yk = yk_next; 
     zk = zk_next;     

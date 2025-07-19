@@ -1,4 +1,4 @@
-function SIMremus100(scenario)
+function SIMremus100(scenario,disturbance)
 % Dependencies:rk
 %   remus100.m            - Dynamics of the Remus 100 AUV
 %   integralSMCheading.m  - Integral sliding mode control for heading
@@ -246,8 +246,11 @@ for i = 1:nTimeSteps
     end
 
     % Ocean current dynamics
-    [Vc,alphaVc,betaVc,wc] = disturbance_function(t(i),h);
-    % Vc = 0; alphaVc = 0; betaVc = 0; wc = 0;
+    if disturbance
+        [Vc,alphaVc,betaVc,wc] = disturbance_function(t(i),h);
+    else
+        Vc = 0; alphaVc = 0; betaVc = 0; wc = 0;
+    end
 
     % Sonar check for obstacle 
     [threat_dist,detected_obs,r_obs,ang_obs,intersect_obs,toward_obs,idx_obs] = sonar3D(x,etadot,target_wp,obs);
@@ -259,13 +262,13 @@ for i = 1:nTimeSteps
         alt_wp = woa.repath_planning(x(7:9),target_wp,detected_obs,radius_obs);
         if idx_wp >= 9
             fprintf('Pos obs: [%.0f %.0f %.0f] \n',detected_obs(1), detected_obs(2), detected_obs(3))
-            fprintf('Current wp [%.0f %.0f %.0f] --  alt wp [%.0f %.0f %.0f] -- target: [%.0f %.0f %.0f] \n',...
-                current_alt_wp(1),current_alt_wp(2),current_alt_wp(3),alt_wp(1),alt_wp(2),alt_wp(3),...
-                target_wp(1),target_wp(2),target_wp(3))
+            % fprintf('Current wp [%.0f %.0f %.0f] --  alt wp [%.0f %.0f %.0f] -- target: [%.0f %.0f %.0f] \n',...
+            %     current_alt_wp(1),current_alt_wp(2),current_alt_wp(3),alt_wp(1),alt_wp(2),alt_wp(3),...
+            %     target_wp(1),target_wp(2),target_wp(3))
         end
         if ~isequal(round(current_alt_wp,1),round(alt_wp,1))
             % fprintf('\n New WP Generated because obs at [%.0f %.0f %.0f] at k:%.0f \n',detected_obs(1),detected_obs(2),detected_obs(3),idx_wp)
-            % wpt = add_alternative_waypoint(wpt,alt_wp,idx_wp);
+            wpt = add_alternative_waypoint(wpt,alt_wp,idx_wp);
             fprintf('New WP at: [%.1f %.1f %.1f]',alt_wp(1),alt_wp(2),alt_wp(3))
             switching = true;
             to_alt_wp = true;
@@ -371,35 +374,6 @@ beta_c = atan2(v.*cos(phi)-w.*sin(phi), ...
     u.*cos(theta)+(v.*sin(phi)+w.*cos(phi)).*sin(theta)); % Vertical crab angle
 alpha = asin( (w-wc) ./ (u-uc) ); % AOA
 beta  = atan2( (v-vc), (u-uc) ); % SSA
-
-%% Generalized velocity
-%PlotState();
-
-%% Heave position and Euler angles
-%PlotEta();
-
-%% Control signals
-%PlotControlSignal();
-
-%% Ocean currents and speed
-%PlotCurrent();
-
-%% Crab angles, SSA and AOA
-if ControlFlag == 3
-    %PlotSlipAngle()
-end
-
-%% 2-D position plots with waypoints
-if ControlFlag == 3
-    %Plot2DPos()
-end
-
-%% 3-D position plot with waypoints
-if ControlFlag == 3
-    %Plot3DPos()
-end
-
-%PlotTrackError()
 
 % Display the vehicle data and an image of the vehicle
 vehicleData = {...
