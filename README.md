@@ -2,7 +2,7 @@
 AUV Simulation for Path Tracking and Obstacle Avoidance
 This repository contains a simulation framework for an **Autonomous Underwater Vehicle (AUV)** performing path tracking and obstacle avoidance. The implementation uses MATLAB for the main simulation and Python for data visualization.   
 <p align="center">
-  <img src="remus100.jpg" alt="AUV Remus100" width="600"/>
+  <img src="remus100.jpg" alt="AUV Remus100" width="550"/>
 </p>
 
 ## Project Structure
@@ -21,9 +21,18 @@ Simulation results will be saved automatically to the ```data/``` folder in .mat
 
 ### 2. Visualize the Results (Python)
 To visualize the simulation output, run the Python script: ```plot_data.py```  
-<p align="center">
-  <img src="example/oa-proposed-trial1.png" alt="Scenario" width="550"/>
-</p>
+<table>
+  <tr>
+    <td align="center">
+      <img src="example/oa-proposed-trial1" alt="Result 1" width="270"/>
+      <br/>Path Tracking & Obstacle Avoidance
+    </td>
+    <td align="center">
+      <img src="example/oa-d-trial1" alt="Result 2" width="270"/>
+      <br/>Threat Function of 2 Methods
+    </td>
+  </tr>
+</table>
 For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://drive.google.com/drive/folders/1r0Oy2otmFsFJCPTh0_OJNiTHkJhXektt?usp=sharing).
 
 ## Dependencies
