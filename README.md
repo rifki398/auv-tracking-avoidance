@@ -24,7 +24,7 @@ To visualize the simulation output, run the Python script: ```plot_data.py```
 <table>
   <tr>
     <td align="center">
-      <img src="example/oa-proposed-trial1.png" alt="Result 1" height="270"/>
+      <img src="example/oa-trial1.png" alt="Result 1" height="270"/>
       <br/>Path Tracking & Obstacle Avoidance
     </td>
     <td align="center">
