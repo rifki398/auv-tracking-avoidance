@@ -32,8 +32,8 @@ To visualize the simulation output, run the Python script: ```plot_data.py```
       <br/>Threat Function of 2 Methods
     </td>
   </tr>
-</table>
-For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://intip.in/NMNk).
+</table>  
+For a more detailed explanation of the scripts, modules, and how this simulation works, please refer to the [manual book](https://intip.in/NMNk)
 
 ## Dependencies
 You need to install:
